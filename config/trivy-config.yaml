@@ -1,0 +1,33 @@
+scanner:
+  severity_levels:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+    - LOW
+  ignore_unfixed: false
+  skip_update: false
+  
+thresholds:
+  critical:
+    max_allowed: 0
+    action: block
+  high:
+    max_allowed: 5
+    action: warn
+  medium:
+    max_allowed: 10
+    action: notify
+  low:
+    max_allowed: 999
+    action: log
+
+reporting:
+  format: json
+  output_dir: ./reports
+  retention_days: 30
+  
+notifications:
+  enabled: true
+  channels:
+    - slack
+  severity_threshold: HIGH

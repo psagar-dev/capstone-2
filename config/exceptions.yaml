@@ -1,0 +1,5 @@
+global:
+  - cve_id: CVE-2021-12345
+    reason: "False positive - not applicable to our use case"
+    expiry_date: "2024-12-31"
+    approved_by: "security-team"
