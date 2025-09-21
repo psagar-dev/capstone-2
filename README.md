@@ -749,3 +749,25 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
    ![slack Fail Result](images/slack-failed.png)
 
   ![slack Pass Result](images/slack-success.png)
+
+
+  ## 📜 Project Information
+
+### 📄 License Details
+This project is released under the MIT License, granting you the freedom to:
+- 🔓 Use in commercial projects
+- 🔄 Modify and redistribute
+- 📚 Use as educational material
+
+## 📞 Contact
+
+📧 Email: [Email Me](securelooper@gmail.com
+)
+🔗 LinkedIn: [LinkedIn Profile](https://www.linkedin.com/in/sagar-93-patel)  
+🐙 GitHub: [GitHub Profile](https://github.com/psagar-dev)  
+
+---
+
+<div align="center">
+  <p>Built with ❤️ by Sagar Patel</p>
+</div>
