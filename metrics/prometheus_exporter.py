@@ -58,47 +58,71 @@ class PrometheusExporter:
             registry=self.registry
         )
     
-    def export_scan_metrics(self, scan_results: Dict, scan_duration: float = None):
-        """Export scan metrics to Prometheus"""
+    def export_scan_metrics(self, scan_results, scan_duration=None, job='container_scan', instance='github_actions'):
+        # Create a new registry for this push
+        registry = CollectorRegistry()
         
-        image = scan_results['image']
+        # Create metrics with additional labels
+        scan_timestamp = Gauge(
+            'container_scan_timestamp',
+            'Timestamp of the container scan',
+            ['job', 'instance', 'image', 'tag'],
+            registry=registry
+        )
         
-        # Update scan counter
-        self.scan_total.labels(
+        vulnerabilities_total = Gauge(
+            'container_vulnerabilities_total',
+            'Total number of vulnerabilities found',
+            ['job', 'instance', 'image', 'tag', 'severity'],
+            registry=registry
+        )
+        
+        scan_duration_metric = Gauge(
+            'container_scan_duration_seconds',
+            'Duration of the container scan in seconds',
+            ['job', 'instance', 'image', 'tag'],
+            registry=registry
+        )
+        
+        # Extract image info from scan results
+        image = scan_results.get('image', 'unknown')
+        tag = scan_results.get('tag', 'latest')
+        
+        # Set timestamp
+        scan_timestamp.labels(
+            job=job,
+            instance=instance,
             image=image,
-            status=scan_results.get('scan_status', 'completed')
-        ).inc()
+            tag=tag
+        ).set(time.time())
         
-        # Update vulnerability counts by severity
-        for severity, count in scan_results['severity_summary'].items():
-            self.vulnerabilities_by_severity.labels(
+        # Set vulnerability metrics
+        for severity in ['critical', 'high', 'medium', 'low']:
+            count = scan_results.get(f'{severity}_count', 0)
+            vulnerabilities_total.labels(
+                job=job,
+                instance=instance,
                 image=image,
+                tag=tag,
                 severity=severity
             ).set(count)
         
-        # Update total vulnerabilities
-        self.total_vulnerabilities.labels(image=image).set(
-            scan_results['total_vulnerabilities']
-        )
-        
-        # Update critical and high severity metrics
-        self.critical_vulnerabilities.labels(image=image).set(
-            scan_results['severity_summary'].get('CRITICAL', 0)
-        )
-        
-        self.high_vulnerabilities.labels(image=image).set(
-            scan_results['severity_summary'].get('HIGH', 0)
-        )
-        
-        # Update scan duration if provided
+        # Set scan duration if provided
         if scan_duration:
-            self.scan_duration.labels(image=image).observe(scan_duration)
+            scan_duration_metric.labels(
+                job=job,
+                instance=instance,
+                image=image,
+                tag=tag
+            ).set(scan_duration)
         
-        # Push to gateway if configured
-        if self.pushgateway_url:
-            self.push_metrics()
-        
-        logger.info(f"Metrics exported for {image}")
+        # Push to gateway with grouping keys
+        push_to_gateway(
+            self.pushgateway_url,
+            job=job,
+            registry=registry,
+            grouping_key={'instance': instance}
+        )
     
     def push_metrics(self):
         """Push metrics to Prometheus Pushgateway"""
