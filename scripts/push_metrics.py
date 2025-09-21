@@ -3,17 +3,10 @@ import json
 from pathlib import Path
 import sys
 from datetime import datetime, timezone
-import uuid
-import re
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 from metrics.prometheus_exporter import PrometheusExporter
-
-def sanitize_label_value(value):
-    """Sanitize label values for Prometheus compatibility"""
-    # Replace invalid characters with underscores
-    return re.sub(r'[^a-zA-Z0-9_.-]', '_', str(value))
 
 def main():
     parser = argparse.ArgumentParser(description='Push metrics to Prometheus')
@@ -30,36 +23,27 @@ def main():
     with open(args.scan_results, 'r') as f:
         scan_results = json.load(f)
     
-    # Create unique scan ID - use timezone-aware datetime
-    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    # Create a simple, unique instance name
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
     
-    # Generate a unique scan_id (sanitized for Prometheus)
     if args.run_id:
-        scan_id = sanitize_label_value(f"{args.run_id}_{timestamp}")
+        # Use GitHub run ID if available
+        instance_name = f"gh_{args.run_id}"
     else:
-        scan_id = f"{timestamp}_{uuid.uuid4().hex[:8]}"
-    
-    # Add scan_id to results
-    scan_results['scan_id'] = scan_id
-    
-    # Use run_id if provided for instance name (sanitized)
-    if args.run_id:
-        unique_instance = sanitize_label_value(f"{args.instance}_{args.run_id}")
-    else:
-        unique_instance = f"{args.instance}_{timestamp}"
+        # Use timestamp as fallback
+        instance_name = f"scan_{timestamp}"
     
     # Export metrics
     exporter = PrometheusExporter(args.pushgateway)
     exporter.export_scan_metrics(
         scan_results, 
         args.scan_duration,
-        job=sanitize_label_value(args.job),
-        instance=unique_instance
+        job=args.job,
+        instance=instance_name
     )
     
     print(f"✅ Metrics pushed to Prometheus successfully")
-    print(f"   Instance: {unique_instance}")
-    print(f"   Scan ID: {scan_id}")
+    print(f"   Instance: {instance_name}")
 
 if __name__ == '__main__':
     main()

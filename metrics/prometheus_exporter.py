@@ -1,7 +1,6 @@
 # src/metrics/prometheus_exporter.py
 
-from prometheus_client import Counter, Gauge, Histogram, push_to_gateway, CollectorRegistry
-from prometheus_client.exposition import basic_auth_handler
+from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 from typing import Dict
 import time
 import logging
@@ -11,163 +10,130 @@ from datetime import datetime, timezone
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def sanitize_label_value(value):
-    """Sanitize label values for Prometheus compatibility"""
-    if value is None:
-        return "unknown"
-    # Replace invalid characters with underscores
-    sanitized = re.sub(r'[^a-zA-Z0-9_.-]', '_', str(value))
-    # Ensure it doesn't start with a number
-    if sanitized and sanitized[0].isdigit():
-        sanitized = f"v_{sanitized}"
-    return sanitized or "unknown"
-
 class PrometheusExporter:
     """Export vulnerability scan metrics to Prometheus"""
     
     def __init__(self, pushgateway_url: str = None):
-        self.pushgateway_url = pushgateway_url
+        # Clean up the URL - ensure it doesn't have trailing slashes or paths
+        if pushgateway_url:
+            # Remove any trailing slashes
+            self.pushgateway_url = pushgateway_url.rstrip('/')
+            # If it includes /metrics, remove it
+            if self.pushgateway_url.endswith('/metrics'):
+                self.pushgateway_url = self.pushgateway_url[:-8]
+        else:
+            self.pushgateway_url = pushgateway_url
     
     def export_scan_metrics(self, scan_results, scan_duration=None, job='container_scan', instance='github_actions'):
         # Create a new registry for this push
         registry = CollectorRegistry()
         
-        # Extract and sanitize image info from scan results
-        image = sanitize_label_value(scan_results.get('image', 'unknown'))
-        tag = sanitize_label_value(scan_results.get('tag', 'latest'))
-        scan_id = sanitize_label_value(scan_results.get('scan_id', str(int(time.time()))))
+        # Extract image info - keep it simple
+        image = scan_results.get('image', 'unknown')
+        tag = scan_results.get('tag', 'latest')
         
-        # Ensure job and instance are sanitized
-        job = sanitize_label_value(job)
-        instance = sanitize_label_value(instance)
+        # Sanitize image name for use in labels (replace problematic characters)
+        image_safe = re.sub(r'[^a-zA-Z0-9_]', '_', image)
+        tag_safe = re.sub(r'[^a-zA-Z0-9_]', '_', tag)
         
-        # Combined image name for labels
-        image_full = f"{image}_{tag}"  # Use underscore instead of colon
+        # Create simple metrics without complex labels
         
-        # --- Define metrics with proper names ---
-        
-        # Total scans counter
-        vulnerability_scans_total = Gauge(
-            'vulnerability_scans_total',
-            'Total number of vulnerability scans performed',
-            ['image', 'status'],
-            registry=registry
-        )
-        
-        # Vulnerabilities by severity
-        vulnerabilities_by_severity = Gauge(
-            'vulnerabilities_by_severity',
-            'Number of vulnerabilities by severity',
-            ['image', 'severity'],
-            registry=registry
-        )
-        
-        # Total vulnerabilities
-        total_vulnerabilities = Gauge(
-            'total_vulnerabilities',
-            'Total number of vulnerabilities in image',
-            ['image'],
-            registry=registry
-        )
-        
-        # Critical vulnerabilities
-        critical_vulnerabilities_total = Gauge(
-            'critical_vulnerabilities_total',
-            'Total number of critical vulnerabilities',
-            ['image'],
-            registry=registry
-        )
-        
-        # High vulnerabilities
-        high_vulnerabilities_total = Gauge(
-            'high_vulnerabilities_total',
-            'Total number of high severity vulnerabilities',
-            ['image'],
-            registry=registry
-        )
-        
-        # Scan duration
-        vulnerability_scan_duration_seconds = Gauge(
-            'vulnerability_scan_duration_seconds',
-            'Duration of vulnerability scan in seconds',
-            ['image'],
-            registry=registry
-        )
-        
-        # Scan timestamp
-        container_scan_timestamp = Gauge(
-            'container_scan_timestamp',
-            'Timestamp of the container scan',
+        # Total vulnerabilities by severity
+        vuln_critical = Gauge(
+            'container_vulnerabilities_critical',
+            'Number of critical vulnerabilities',
             ['image', 'tag'],
             registry=registry
         )
         
-        # Set metrics values
+        vuln_high = Gauge(
+            'container_vulnerabilities_high',
+            'Number of high vulnerabilities',
+            ['image', 'tag'],
+            registry=registry
+        )
         
-        # Set scan total
-        vulnerability_scans_total.labels(
-            image=image_full,
-            status='completed'
-        ).set(1)
+        vuln_medium = Gauge(
+            'container_vulnerabilities_medium',
+            'Number of medium vulnerabilities',
+            ['image', 'tag'],
+            registry=registry
+        )
         
-        # Set vulnerabilities by severity and calculate total
-        total_count = 0
-        for severity in ['critical', 'high', 'medium', 'low']:
-            count = scan_results.get(f'{severity}_count', 0)
-            vulnerabilities_by_severity.labels(
-                image=image_full,
-                severity=severity
-            ).set(count)
-            total_count += count
+        vuln_low = Gauge(
+            'container_vulnerabilities_low',
+            'Number of low vulnerabilities',
+            ['image', 'tag'],
+            registry=registry
+        )
         
-        # Set total vulnerabilities
-        total_vulnerabilities.labels(
-            image=image_full
-        ).set(total_count)
+        vuln_total = Gauge(
+            'container_vulnerabilities_total',
+            'Total number of vulnerabilities',
+            ['image', 'tag'],
+            registry=registry
+        )
         
-        # Set critical and high counts
-        critical_vulnerabilities_total.labels(
-            image=image_full
-        ).set(scan_results.get('critical_count', 0))
+        scan_timestamp = Gauge(
+            'container_scan_last_timestamp',
+            'Timestamp of last scan',
+            ['image', 'tag'],
+            registry=registry
+        )
         
-        high_vulnerabilities_total.labels(
-            image=image_full
-        ).set(scan_results.get('high_count', 0))
+        # Set the metric values
+        critical_count = scan_results.get('critical_count', 0)
+        high_count = scan_results.get('high_count', 0)
+        medium_count = scan_results.get('medium_count', 0)
+        low_count = scan_results.get('low_count', 0)
+        total_count = critical_count + high_count + medium_count + low_count
         
-        # Set scan duration if provided
+        vuln_critical.labels(image=image_safe, tag=tag_safe).set(critical_count)
+        vuln_high.labels(image=image_safe, tag=tag_safe).set(high_count)
+        vuln_medium.labels(image=image_safe, tag=tag_safe).set(medium_count)
+        vuln_low.labels(image=image_safe, tag=tag_safe).set(low_count)
+        vuln_total.labels(image=image_safe, tag=tag_safe).set(total_count)
+        scan_timestamp.labels(image=image_safe, tag=tag_safe).set(time.time())
+        
+        # If scan duration is provided
         if scan_duration is not None:
-            vulnerability_scan_duration_seconds.labels(
-                image=image_full
-            ).set(scan_duration)
+            scan_duration_metric = Gauge(
+                'container_scan_duration_seconds',
+                'Scan duration in seconds',
+                ['image', 'tag'],
+                registry=registry
+            )
+            scan_duration_metric.labels(image=image_safe, tag=tag_safe).set(scan_duration)
         
-        # Set timestamp
-        container_scan_timestamp.labels(
-            image=image,
-            tag=tag
-        ).set(time.time())
-        
-        # Push to gateway
+        # Push to gateway - use simple approach
         try:
-            # Create grouping key with sanitized values
-            grouping_key = {
-                'instance': instance,
-                'scan_id': scan_id
-            }
+            # Log what we're about to push
+            logger.info(f"Pushing metrics to: {self.pushgateway_url}")
+            logger.info(f"Job: {job}, Instance: {instance}")
+            logger.info(f"Image: {image_safe}, Tag: {tag_safe}")
+            logger.info(f"Vulnerabilities - Critical: {critical_count}, High: {high_count}, Medium: {medium_count}, Low: {low_count}")
             
-            logger.info(f"Pushing metrics with job={job}, grouping_key={grouping_key}")
-            
+            # Simple push without complex grouping
             push_to_gateway(
-                self.pushgateway_url,
+                gateway=self.pushgateway_url,
                 job=job,
                 registry=registry,
-                grouping_key=grouping_key
+                grouping_key={'instance': instance}  # Just use simple instance
             )
             
-            logger.info(f"Metrics pushed successfully for {image}:{tag} (scan_id: {scan_id})")
+            logger.info(f"✅ Metrics pushed successfully")
+            
         except Exception as e:
-            logger.error(f"Error pushing metrics: {str(e)}")
-            # Log more details for debugging
-            logger.error(f"Pushgateway URL: {self.pushgateway_url}")
-            logger.error(f"Job: {job}")
-            logger.error(f"Grouping key: {grouping_key}")
-            raise
+            logger.error(f"❌ Error pushing metrics: {str(e)}")
+            # Try alternative push without grouping_key
+            try:
+                logger.info("Trying alternative push without grouping_key...")
+                push_to_gateway(
+                    gateway=self.pushgateway_url,
+                    job=f"{job}/{instance}",  # Include instance in job name
+                    registry=registry
+                )
+                logger.info(f"✅ Metrics pushed successfully (alternative method)")
+            except Exception as e2:
+                logger.error(f"❌ Alternative push also failed: {str(e2)}")
+                raise
