@@ -148,9 +148,17 @@ class SlackNotifier:
                     "type": "button",
                     "text": {
                         "type": "plain_text",
+                        "text": "View Full Report"
+                    },
+                    "url": "https://your-dashboard-url.com/reports/latest"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
                         "text": "View in Grafana"
                     },
-                    "url": "http://13.233.130.69:3000/dashboards"
+                    "url": "https://your-grafana-url.com/dashboard"
                 }
             ]
         })

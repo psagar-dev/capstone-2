@@ -9,7 +9,7 @@ RUN pip install --upgrade pip && \
     
 COPY . .
 
-FROM python:3.13-alpine3.19
+FROM python:3.13-alpine
 
 RUN apk add --no-cache libgcc libstdc++ musl
 

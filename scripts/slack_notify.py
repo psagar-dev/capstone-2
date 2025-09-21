@@ -13,7 +13,6 @@ def main():
     parser.add_argument('--scan-results', required=True, help='Scan results file')
     parser.add_argument('--webhook-url', required=True, help='Slack webhook URL')
     parser.add_argument('--threshold-results', help='Threshold check results file')
-    parser.add_argument('--status', default='success', help='Build status')
     
     args = parser.parse_args()
     
