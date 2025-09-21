@@ -742,7 +742,7 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
    - Reads `scan-results.json`  
    - Generates a Markdown table with vulnerability stats  
    - Posts it as a PR comment (so reviewers see security results inline).
-
+  ![pull_request Result](images/pull-request-description.png)
    Grafana Dashboard
    ![grafana dashboard Result](images/grafana-dashboard.png)
 
