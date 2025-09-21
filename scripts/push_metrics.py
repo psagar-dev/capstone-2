@@ -2,12 +2,18 @@ import argparse
 import json
 from pathlib import Path
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
+import re
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 from metrics.prometheus_exporter import PrometheusExporter
+
+def sanitize_label_value(value):
+    """Sanitize label values for Prometheus compatibility"""
+    # Replace invalid characters with underscores
+    return re.sub(r'[^a-zA-Z0-9_.-]', '_', str(value))
 
 def main():
     parser = argparse.ArgumentParser(description='Push metrics to Prometheus')
@@ -24,21 +30,21 @@ def main():
     with open(args.scan_results, 'r') as f:
         scan_results = json.load(f)
     
-    # Create unique scan ID
-    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    # Create unique scan ID - use timezone-aware datetime
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     
-    # Generate a unique scan_id
+    # Generate a unique scan_id (sanitized for Prometheus)
     if args.run_id:
-        scan_id = f"{args.run_id}_{timestamp}"
+        scan_id = sanitize_label_value(f"{args.run_id}_{timestamp}")
     else:
         scan_id = f"{timestamp}_{uuid.uuid4().hex[:8]}"
     
     # Add scan_id to results
     scan_results['scan_id'] = scan_id
     
-    # Use run_id if provided for instance name
+    # Use run_id if provided for instance name (sanitized)
     if args.run_id:
-        unique_instance = f"{args.instance}_{args.run_id}"
+        unique_instance = sanitize_label_value(f"{args.instance}_{args.run_id}")
     else:
         unique_instance = f"{args.instance}_{timestamp}"
     
@@ -47,7 +53,7 @@ def main():
     exporter.export_scan_metrics(
         scan_results, 
         args.scan_duration,
-        job=args.job,
+        job=sanitize_label_value(args.job),
         instance=unique_instance
     )
     
