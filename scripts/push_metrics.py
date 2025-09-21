@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import sys
 from datetime import datetime
-import hashlib
+import uuid
 
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -24,19 +24,26 @@ def main():
     with open(args.scan_results, 'r') as f:
         scan_results = json.load(f)
     
-    # Create unique instance identifier
+    # Create unique scan ID
     timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
     
-    # Use run_id if provided (e.g., from GitHub Actions), otherwise use timestamp
+    # Generate a unique scan_id
+    if args.run_id:
+        scan_id = f"{args.run_id}_{timestamp}"
+    else:
+        scan_id = f"{timestamp}_{uuid.uuid4().hex[:8]}"
+    
+    # Add scan_id to results
+    scan_results['scan_id'] = scan_id
+    
+    # Use run_id if provided for instance name
     if args.run_id:
         unique_instance = f"{args.instance}_{args.run_id}"
     else:
         unique_instance = f"{args.instance}_{timestamp}"
     
-    # Export metrics with unique instance
+    # Export metrics
     exporter = PrometheusExporter(args.pushgateway)
-    
-    # You'll need to modify your exporter to accept job and instance parameters
     exporter.export_scan_metrics(
         scan_results, 
         args.scan_duration,
@@ -44,7 +51,9 @@ def main():
         instance=unique_instance
     )
     
-    print(f"✅ Metrics pushed to Prometheus successfully (instance: {unique_instance})")
+    print(f"✅ Metrics pushed to Prometheus successfully")
+    print(f"   Instance: {unique_instance}")
+    print(f"   Scan ID: {scan_id}")
 
 if __name__ == '__main__':
     main()
