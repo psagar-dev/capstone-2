@@ -744,4 +744,8 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
 
    Dashboard
 
-   ![PROMETHEUS PUSHGATEWAY Result](images/push-metrics-result.png)
+   ![grafana dashboard Result](images/grafana-dashboard.png)
+
+   ![slack Fail Result](images/slack-failed.png)
+
+  ![slack Pass Result](images/slack-success.png)
