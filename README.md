@@ -650,7 +650,9 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
    Instead of directly calling `trivy`, you use a custom Python wrapper (`ci_scanner.py`).  
    - Scans the built image  
    - Produces `scan-results.json` in JSON format
-   
+
+   ![Image scanner](images/image_scanner.png)
+
 7. **Upload Scan Results (Artifact)**
    ```yaml
    - name: Upload Scan Results
@@ -661,6 +663,8 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
         retention-days: 30
    ```
    Stores results as a downloadable artifact in GitHub → so humans can check results later.
+
+  ![upload-artifact](images/upload-artifact.png)
 
 8. **Check Vulnerability Thresholds**
    ```yaml
@@ -674,6 +678,7 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
    This script enforces policies. Example: “fail the build if more than 2 critical vulnerabilities.”  
    It uses configs from `config/trivy-config.yaml`.
 
+  ![threshold checker](images/threshold-checker.png)
 9. **Send Slack Notification**
    ```yaml
     - name: Send Slack Notification
@@ -684,6 +689,8 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
           --webhook-url ${{ secrets.SLACK_WEBHOOK_URL }}
    ```
    Always runs (`if: always()`). Sends a message to Slack with summarized results, using a webhook stored in GitHub Secrets.
+
+![slack-notify](images/slack-notify-success.png)
 
 10. **Push Metrics to Prometheus**
    ```yaml
@@ -696,6 +703,9 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
    ```
    Also always runs. Pushes security metrics into Prometheus via `PUSHGATEWAY`.
 
+![PROMETHEUS PUSHGATEWAY Action](images/push-metrics-action.png)
+
+![PROMETHEUS PUSHGATEWAY Result](images/push-metrics-result.png)
 
 11. **Comment on PR**
    ```yaml
@@ -731,3 +741,7 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
    - Reads `scan-results.json`  
    - Generates a Markdown table with vulnerability stats  
    - Posts it as a PR comment (so reviewers see security results inline).
+
+   Dashboard
+
+   ![PROMETHEUS PUSHGATEWAY Result](images/push-metrics-result.png)

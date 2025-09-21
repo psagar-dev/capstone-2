@@ -1,5 +1,28 @@
 {
-  "passed": true,
-  "violations": [],
-  "actions": []
+  "passed": false,
+  "violations": [
+    {
+      "severity": "MEDIUM",
+      "count": 615,
+      "max_allowed": 10,
+      "action": "notify"
+    },
+    {
+      "severity": "HIGH",
+      "count": 234,
+      "max_allowed": 5,
+      "action": "warn"
+    },
+    {
+      "severity": "CRITICAL",
+      "count": 33,
+      "max_allowed": 0,
+      "action": "block"
+    }
+  ],
+  "actions": [
+    "notify",
+    "warn",
+    "block"
+  ]
 }
