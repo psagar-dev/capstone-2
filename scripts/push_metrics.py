@@ -12,6 +12,8 @@ def main():
     parser.add_argument('--scan-results', required=True, help='Scan results file')
     parser.add_argument('--pushgateway', required=True, help='Prometheus Pushgateway URL')
     parser.add_argument('--scan-duration', type=float, help='Scan duration in seconds')
+    parser.add_argument('--job', default='container_scan', help='Job name for metrics')
+    parser.add_argument('--instance', default='github_actions', help='Instance name')
     
     args = parser.parse_args()
     
