@@ -414,9 +414,9 @@ Set these as **GitHub Secrets** for security:
 
 | Variable Name            | Example                                                                   | Usage               |
 | ------------------------ | ------------------------------------------------------------------------- | ------------------- |
-| SLACK_WEBHOOK_URL     | https://hooks.slack.com/services/XXXXX/12XXX                                                       | AWS authentication  |
-| PROMETHEUS_PUSHGATEWAY  | http://13.233.130.69:9091                                     | AWS authentication  |
-|
+| SLACK_WEBHOOK_URL     | https://hooks.slack.com/services/XXXXX/12XXX                                                       | Slack AWS  |
+| PROMETHEUS_PUSHGATEWAY  | http://13.233.130.69:9091                                     | PUSHGATEWAY URL  |
+| TOKEN_GITHUB  | Token                                     | AWS Github Token  |
 
 ### Security Notes
 - **Never hardcode secrets** directly in workflow files.  
@@ -689,8 +689,9 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
           --webhook-url ${{ secrets.SLACK_WEBHOOK_URL }}
    ```
    Always runs (`if: always()`). Sends a message to Slack with summarized results, using a webhook stored in GitHub Secrets.
-
 ![slack-notify](images/slack-notify-success.png)
+![slack Fail Result](images/slack-failed.png)
+![slack Pass Result](images/slack-success.png)
 
 10. **Push Metrics to Prometheus**
    ```yaml
@@ -742,16 +743,10 @@ There’s a single job called `build-and-scan`. It runs on GitHub’s Ubuntu run
    - Generates a Markdown table with vulnerability stats  
    - Posts it as a PR comment (so reviewers see security results inline).
 
-   Dashboard
-
+   Grafana Dashboard
    ![grafana dashboard Result](images/grafana-dashboard.png)
 
-   ![slack Fail Result](images/slack-failed.png)
-
-  ![slack Pass Result](images/slack-success.png)
-
-
-  ## 📜 Project Information
+## 📜 Project Information
 
 ### 📄 License Details
 This project is released under the MIT License, granting you the freedom to:
