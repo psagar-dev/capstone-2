@@ -42,6 +42,7 @@ def main():
         instance=instance_name
     )
     
+    
     print(f"✅ Metrics pushed to Prometheus successfully")
     print(f"   Instance: {instance_name}")
 
